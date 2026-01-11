@@ -243,65 +243,30 @@ When TreeSitter is not available, falls back to `backward-list'."
 
 (defun treesit-sexp-down-list (&optional arg interactive)
     "Move forward down one level of parentheses.
-This command will also work on other parentheses-like expressions
-defined by the current language mode.
-With ARG, do this that many times.
-A negative argument means move backward but still go down a level.
-When TreeSitter is not available, falls back to `down-list'."
+Find the next sibling node with children and position inside it."
     (interactive "^p\nd")
     (if (or (not (treesit-sexp--treesit-available-p)) interactive)
             (down-list arg interactive)
         (or arg (setq arg 1))
-        (let ((inc (if (> arg 0) 1 -1)))
-            (while (not (zerop arg))
-                (let* ((pos (point))
-                       (node (treesit-node-at pos))
-                       (list-node (cond
-                                   ((member (treesit-node-type node) '("(" "{" "[" "<"))
-                                    node)
-                                   (t
-                                    (let ((p (treesit-node-parent node)))
-                                        (while (and p
-                                                    (not (member (treesit-node-type p) '("(" "{" "[" "<")))
-                                                    (setq p (treesit-node-parent p))))
-                                        p))))
-                       (child (when list-node
-                                  (if (> inc 0)
-                                          (treesit-sexp--find-first-content-child list-node)
-                                      (treesit-sexp--find-last-content-child list-node)))))
-                    (if child
-                            (progn
-                                (goto-char (if (> inc 0)
-                                                   (treesit-node-start child)
-                                               (treesit-node-end child)))
-                                (unless (= (point) pos)
-                                    (setq arg (- arg inc))))
-                        (setq arg 0)))))))
-
-(defun treesit-sexp--find-first-content-child (node)
-    "Find the first non-punctuation, non-wall child of NODE."
-    (let ((i 0)
-          (count (treesit-node-child-count node)))
-        (while (and (< i count)
-                    (let ((child (treesit-node-child node i)))
-                        (or (member (treesit-node-type child) '("(" "{" "[" "<" ")" "}" "]" ">"))
-                            (and (not (treesit-node-check child 'named))
-                                 (member (treesit-node-type child) '("," "." ";" "-?>")))))
-                    (setq i (1+ i)))
-            (when (< i count)
-                (treesit-node-child node i)))))
-
-(defun treesit-sexp--find-last-content-child (node)
-    "Find the last non-punctuation, non-wall child of NODE."
-    (let ((i (1- (treesit-node-child-count node))))
-        (while (and (>= i 0)
-                    (let ((child (treesit-node-child node i)))
-                        (or (member (treesit-node-type child) '("(" "{" "[" "<" ")" "}" "]" ">"))
-                            (and (not (treesit-node-check child 'named))
-                                 (member (treesit-node-type child) '("," "." ";" "-?>")))))
-                    (setq i (1- i)))
-            (when (>= i 0)
-                (treesit-node-child node i)))))
+        (let ((direction (if (> arg 0) 'forward 'backward))
+              (count (abs arg)))
+            (dotimes (_ count)
+                (let* ((node (treesit-node-at (point)))
+                       (target-node
+                        (catch 'found
+                          (let ((curr (if (eq direction 'forward)
+                                          (treesit-node-next-sibling node)
+                                        (treesit-node-prev-sibling node))))
+                            (while curr
+                              (when (> (treesit-node-child-count curr) 0)
+                                (throw 'found curr))
+                              (setq curr (if (eq direction 'forward)
+                                             (treesit-node-next-sibling curr)
+                                           (treesit-node-prev-sibling curr))))))))
+                  (when target-node
+                    (goto-char (if (eq direction 'forward)
+                                   (1+ (treesit-node-start target-node))
+                                 (1- (treesit-node-end target-node))))))))))
 
 (defun treesit-sexp-mark-sexp (&optional arg allow-extend)
     "Set mark ARG sexps from point or move mark one sexp.
