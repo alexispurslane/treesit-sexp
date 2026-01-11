@@ -254,19 +254,19 @@ Find the next sibling node with children and position inside it."
                 (let* ((node (treesit-node-at (point)))
                        (target-node
                         (catch 'found
-                          (let ((curr (if (eq direction 'forward)
-                                          (treesit-node-next-sibling node)
-                                        (treesit-node-prev-sibling node))))
-                            (while curr
-                              (when (> (treesit-node-child-count curr) 0)
-                                (throw 'found curr))
-                              (setq curr (if (eq direction 'forward)
-                                             (treesit-node-next-sibling curr)
-                                           (treesit-node-prev-sibling curr))))))))
-                  (when target-node
-                    (goto-char (if (eq direction 'forward)
-                                   (1+ (treesit-node-start target-node))
-                                 (1- (treesit-node-end target-node))))))))))
+                            (let ((curr (if (eq direction 'forward)
+                                                (treesit-node-next-sibling node)
+                                            (treesit-node-prev-sibling node))))
+                                (while curr
+                                    (when (> (treesit-node-child-count curr) 0)
+                                        (throw 'found curr))
+                                    (setq curr (if (eq direction 'forward)
+                                                       (treesit-node-next-sibling curr)
+                                                   (treesit-node-prev-sibling curr))))))))
+                    (when target-node
+                        (goto-char (if (eq direction 'forward)
+                                           (1+ (treesit-node-start target-node))
+                                       (1- (treesit-node-end target-node))))))))))
 
 (defun treesit-sexp-mark-sexp (&optional arg allow-extend)
     "Set mark ARG sexps from point or move mark one sexp.
