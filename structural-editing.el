@@ -7,11 +7,10 @@
 ;;; Code:
 
 (defun structural-editing-splice ()
-    "Remove parentheses around the current sexp.
-Merges the current sexp with its parent sexp."
+    "Remove parentheses around the current sexp, merging it with its parent."
     (interactive)
     (save-excursion
-        (condition-case nil
+        (condition-case err
                 (progn
                     (backward-up-list)
                     (let ((start (point)))
@@ -19,53 +18,50 @@ Merges the current sexp with its parent sexp."
                         (delete-char -1)
                         (goto-char start)
                         (delete-char 1)))
-            (scan-error
-             (message "Not inside a list")))))
+            (scan-error (error "Cannot splice: not in a list")))))
 
 (defun structural-editing-slurp-forward ()
     "Pull the next sexp into the current list."
     (interactive)
-    (save-excursion
-        (condition-case nil
-                (progn
-                    ;; Get to the inner list opening paren
-                    (backward-up-list)
-                    (let ((inner-close (progn
-                                           (forward-list)  ; Go to matching )
-                                           (point))))
-                        ;; Now extract the next sexp after this list
-                        (let ((next-start (point)))
-                            (forward-sexp)
-                            (let ((next-sexp (delete-and-extract-region next-start (point))))
-                                (goto-char inner-close)
-                                (backward-char)
-                                (insert next-sexp)))))
-            (scan-error
-             (message "Cannot slurp forward")))))
+    (condition-case err
+        (let ((sibling nil))
+            (save-excursion
+                (catch 'found
+                    (while t
+                        (backward-up-list)
+                        (forward-list)
+                        (let ((test-pos (point)))
+                            (condition-case nil
+                                (progn
+                                    (forward-sexp)
+                                    (setq sibling (delete-and-extract-region test-pos (point)))
+                                    (throw 'found nil))
+                                (scan-error nil))))
+                    (error "Cannot slurp forward: no next sexp in any containing list")))
+            (backward-up-list)
+            (forward-list)
+            (backward-char)
+            (when (eq (char-before) ?\()
+                (when (and (> (length sibling) 0)
+                           (eq (string-to-char sibling) ?\ ))
+                    (setq sibling (substring sibling 1))))
+            (insert sibling))
+        (scan-error (error "Cannot slurp forward: no next sexp in any containing list"))))
 
 (defun structural-editing-slurp-backward ()
-    "Pull the previous sexp into the current list.
-
-When the cursor is inside a list, slurp the preceding sexp into that list.
-Example: (a (|b) c) → ((a b) c)"
+    "STUB: Pull the previous sexp into the current list."
     (interactive)
-    (save-excursion
-        (condition-case nil
-                (progn
-                    ;; Find the outer list and the element before the inner list
-                    (backward-up-list)
-                    (let ((outer-open (point)))
-                        (forward-sexp)  ; Skip to after the inner list
-                        (backward-sexp) ; Back to the inner list  
-                        (backward-char) ; To space before inner list
-                        (let ((space-end (point)))
-                            (backward-sexp) ; Back to start of preceding element
-                            (let ((text-to-slurp (delete-and-extract-region (point) space-end)))
-                                (goto-char outer-open)
-                                (forward-char)
-                                (insert text-to-slurp)))))
-            (scan-error
-             (message "Cannot slurp backward")))))
+    nil)
+
+(defun structural-editing-barf-forward ()
+    "STUB: Move the last element out of the current list."
+    (interactive)
+    nil)
+
+(defun structural-editing-barf-backward ()
+    "STUB: Move the first element out of the current list."
+    (interactive)
+    nil)
 
 (provide 'structural-editing)
 ;;; structural-editing.el ends here
