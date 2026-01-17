@@ -177,18 +177,21 @@ After:  (a (b |c) d)
 ```
 
 **Algorithm**:
-1. Move to current list's opening paren: `(backward-up-list)`
-2. Extract previous sexp with following space:
-   - Capture extraction end: `space-end = (point)` (starts just before the opening parenthesis of the starting expression)
-   - Move to the start of the previous sexp: `(backward-sexp)`
-   - Extract region: `(delete-and-extract-region (point) space-end)`
-3. Navigate to insertion position: `(forward-char)` (move past inner list's opening paren)
-4. Insert extracted text (includes the space needed): `(insert text-to-slurp)`
+1. Save the insertion position inside the current list: `insertion-pos = (point)`
+2. Keep going up the tree until we find a sibling to grab:
+   - Loop: do `(backward-up-list)`, then `(backward-list)`
+   - Try `(backward-sexp)` 
+   - If successful, we've found a parent with a previous sibling
+   - If `scan-error`, continue up the tree
+3. Once we found a parent with a previous sibling, extract it with its following space:
+   - Mark extraction end: `extraction-end = (point)`
+   - Move to start of previous sexp: `(backward-sexp)`
+   - Extract region: `(delete-and-extract-region (point) extraction-end)`
+4. Return to `insertion-pos`
+5. Move inside the current list and insert the extracted text
+6. Handle spacing: if inserting after `( ` (empty list), trim trailing space
 
-**Key insight**: Use exclusively sexp-based navigation (`backward-sexp`, `forward-sexp`) rather than character movement for reliability. The extraction captures both the previous sexp and its following space separator in one region operation, ensuring structural integrity even when elements are adjacent.
-
-**Edge case handling**:
-- The unified region extraction naturally handles both spaced and unspaced cases
+**Key insight**: Just like slurp-forward traverses up to find a next sibling, slurp-backward traverses up to find a previous sibling. This handles deeply nested cases like `(a (b ((|c) d) e))` where we need to go up the tree to find a sibling to slurp.
 
 ---
 

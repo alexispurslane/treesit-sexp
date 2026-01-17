@@ -162,6 +162,10 @@ Returns (CONTENT . POS) where POS is the position of the pipe, and CONTENT has t
           "((a) (|b) c)" 'structural-editing-slurp-backward
           "(((a) b) c)")
 
+(test-run "slurp-backward: extending a deeply nested list"
+          "(a (b (c|)) d)" 'structural-editing-slurp-backward
+          "(a ((b c)) d)")
+
 ;;;=================================================================
 ;;; Test: structural-editing-barf-forward
 ;;;=================================================================
@@ -172,7 +176,7 @@ Returns (CONTENT . POS) where POS is the position of the pipe, and CONTENT has t
 
 (test-run "barf-forward: single element inner list"
           "(a (|b) c)" 'structural-editing-barf-forward
-          "(a b () c)")
+          "(a () b c)")
 
 (test-run "barf-forward: at beginning of inner list"
           "(a b (|c d e) f)" 'structural-editing-barf-forward
@@ -180,7 +184,7 @@ Returns (CONTENT . POS) where POS is the position of the pipe, and CONTENT has t
 
 (test-run "barf-forward: nested case"
           "(x (a b (|c d) e) f)" 'structural-editing-barf-forward
-          "(x (a b (|c) d e) f)")
+          "(x (a b (c) d e) f)")
 
 ;;;=================================================================
 ;;; Test: structural-editing-barf-backward
