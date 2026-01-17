@@ -11,8 +11,15 @@ test:
 
 # Run a specific test file
 test-run name:
-    emacs --batch -Q -L . -l "test-{{name}}.el" -f ert-run-tests-batch-and-exit
+    #!/usr/bin/env bash
+    if [ -f "test-{{name}}.el" ]; then
+        emacs --batch -Q -L . -l "test-{{name}}.el" -f ert-run-tests-batch-and-exit
+    else
+        echo "Test file test-{{name}}.el not found"
+        exit 1
+    fi
 
 # List all available test files
 test-list:
-    @ls test-*.el 2>/dev/null || echo "No test files found"
+    @echo "Available ERT test files:"
+    @ls -1 test-*.el 2>/dev/null | sed 's/^/  - /' || echo "  (none found)"
